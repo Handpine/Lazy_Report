@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lazy-report-v1';
+const CACHE_NAME = 'lazy-report-v2';
 const ASSETS = [
   './',
   './index.html',
