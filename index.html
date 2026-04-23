@@ -1,4 +1,4 @@
-<!-- Deployment Trigger: 2026-04-23T19:52:00 -->
+<!-- Deployment Trigger: 2026-04-23T20:03:00 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -47,6 +47,7 @@
         }
         .glass-btn:hover { background: rgba(255,255,255,0.9); transform: translateY(-2px); }
         .glass-btn:active { transform: scale(0.98); }
+        .glass-btn.active { background: var(--brand); color: white; border-color: var(--brand); }
         
         .primary-btn {
             background: var(--brand); color: white; border: none;
@@ -59,7 +60,6 @@
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 10px; }
 
-        /* Default: Hide Mobile Elements */
         .mobile-nav-bar, .mobile-top-tools { display: none !important; }
 
         @media print {
@@ -70,9 +70,22 @@
             .custom-scroll { overflow: visible !important; height: auto !important; }
             h2.serif { page-break-before: always; padding-top: 40px; }
             h2.serif:first-child { page-break-before: avoid; }
+            .editable-field { border: none !important; background: none !important; padding: 0 !important; }
         }
 
-        /* Mobile Specific Shell */
+        .editable-field { 
+            outline: none; transition: 0.2s; border-radius: 8px;
+        }
+        .editable-field:hover { background: rgba(62, 92, 118, 0.03); }
+        .is-editing .editable-field { 
+            border-bottom: 1px dashed rgba(62, 92, 118, 0.2); 
+            padding: 4px 8px; margin: -4px -8px;
+        }
+        .is-editing .editable-field:focus { 
+            background: rgba(62, 92, 118, 0.06); 
+            border-bottom: 1px solid var(--brand);
+        }
+
         @media (max-width: 768px) {
             .app-container { width: 100vw !important; height: 100vh !important; border-radius: 0 !important; margin: 0 !important; }
             .mobile-nav-bar {
@@ -109,14 +122,24 @@
     <script type="text/babel">
         const { useState, useRef, useEffect } = React;
 
-        function MetricGrid({ metrics }) {
+        function MetricGrid({ metrics, isEditing, onUpdate }) {
             return (
                 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', margin: '24px 0'}}>
                     {metrics.map((m, i) => (
                         <div key={i} style={{background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #F0F0F0', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.02)'}}>
-                            <div style={{fontSize: '10px', color: '#BBB', fontWeight: 700, letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase'}}>{m.label}</div>
+                            <div 
+                                className="editable-field"
+                                contentEditable={isEditing}
+                                onBlur={(e) => onUpdate(i, 'label', e.target.innerText)}
+                                style={{fontSize: '10px', color: '#BBB', fontWeight: 700, letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase'}}
+                            >{m.label}</div>
                             <div style={{fontSize: '26px', fontWeight: 600, color: m.trend === 'up' ? '#D9534F' : m.trend === 'down' ? '#5CB85C' : 'var(--brand)'}}>
-                                {m.value}<span style={{fontSize: '14px', marginLeft: '4px'}}>{m.trend === 'up' ? '↑' : m.trend === 'down' ? '↓' : ''}</span>
+                                <span 
+                                    className="editable-field"
+                                    contentEditable={isEditing}
+                                    onBlur={(e) => onUpdate(i, 'value', e.target.innerText)}
+                                >{m.value}</span>
+                                <span style={{fontSize: '14px', marginLeft: '4px'}}>{m.trend === 'up' ? '↑' : m.trend === 'down' ? '↓' : ''}</span>
                             </div>
                         </div>
                     ))}
@@ -124,15 +147,25 @@
             );
         }
 
-        function FlowStep({ steps }) {
+        function FlowStep({ steps, isEditing, onUpdate }) {
             return (
                 <div style={{display: 'flex', flexDirection: 'column', gap: '16px', margin: '32px 0'}}>
                     {steps.map((s, i) => (
                         <div key={i} style={{display: 'flex', gap: '20px', alignItems: 'flex-start'}}>
                             <div style={{width: '32px', height: '32px', background: 'var(--brand)', color: 'white', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0, fontSize: '12px'}}>{i+1}</div>
                             <div style={{flex: 1, background: 'white', padding: '20px 24px', borderRadius: '20px', border: '1px solid #F0F0F0', boxShadow: '0 4px 15px rgba(0,0,0,0.02)'}}>
-                                <div style={{fontWeight: 700, color: 'var(--brand)', fontSize: '17px'}}>{s.action}</div>
-                                <div style={{color: '#666', fontSize: '15px', marginTop: '6px', lineHeight: 1.6}}>{s.impact}</div>
+                                <div 
+                                    className="editable-field"
+                                    contentEditable={isEditing}
+                                    onBlur={(e) => onUpdate(i, 'action', e.target.innerText)}
+                                    style={{fontWeight: 700, color: 'var(--brand)', fontSize: '17px'}}
+                                >{s.action}</div>
+                                <div 
+                                    className="editable-field"
+                                    contentEditable={isEditing}
+                                    onBlur={(e) => onUpdate(i, 'impact', e.target.innerText)}
+                                    style={{color: '#666', fontSize: '15px', marginTop: '6px', lineHeight: 1.6}}
+                                >{s.impact}</div>
                             </div>
                         </div>
                     ))}
@@ -140,26 +173,71 @@
             );
         }
 
-        function AdaptiveContent({ data }) {
+        function AdaptiveContent({ data, isEditing, onUpdate }) {
             if (!data) return null;
-            if (typeof data === 'string') return <p style={{lineHeight: 1.9, fontSize: '18px', color: '#444', margin: '20px 0'}}>{data}</p>;
+            if (typeof data === 'string') {
+                return (
+                    <p 
+                        className="editable-field"
+                        contentEditable={isEditing}
+                        onBlur={(e) => onUpdate('text', e.target.innerText)}
+                        style={{lineHeight: 1.9, fontSize: '18px', color: '#444', margin: '20px 0', whiteSpace: 'pre-wrap'}}
+                    >{data}</p>
+                );
+            }
             return (
                 <div>
                     {data.quote && (
                         <div style={{padding: '32px', background: 'rgba(62, 92, 118, 0.04)', borderRadius: '28px', borderLeft: '6px solid var(--brand)', margin: '40px 0'}}>
-                            <div className="serif" style={{fontSize: '22px', fontStyle: 'italic', color: 'var(--brand)', lineHeight: 1.6}}>"{data.quote}"</div>
-                            {data.author && <div style={{marginTop: '16px', textAlign: 'right', fontSize: '14px', color: '#888', fontWeight: 600}}>— {data.author}</div>}
+                            <div 
+                                className="serif editable-field" 
+                                contentEditable={isEditing}
+                                onBlur={(e) => onUpdate('quote', e.target.innerText)}
+                                style={{fontSize: '22px', fontStyle: 'italic', color: 'var(--brand)', lineHeight: 1.6}}
+                            >"{data.quote}"</div>
+                            {data.author && (
+                                <div 
+                                    className="editable-field"
+                                    contentEditable={isEditing}
+                                    onBlur={(e) => onUpdate('author', e.target.innerText)}
+                                    style={{marginTop: '16px', textAlign: 'right', fontSize: '14px', color: '#888', fontWeight: 600}}
+                                >— {data.author}</div>
+                            )}
                         </div>
                     )}
-                    {data.metrics && <MetricGrid metrics={data.metrics} />}
-                    {data.steps && <FlowStep steps={data.steps} />}
+                    {data.metrics && <MetricGrid 
+                        metrics={data.metrics} 
+                        isEditing={isEditing} 
+                        onUpdate={(idx, key, val) => {
+                            const newMetrics = [...data.metrics];
+                            newMetrics[idx][key] = val;
+                            onUpdate('metrics', newMetrics);
+                        }}
+                    />}
+                    {data.steps && <FlowStep 
+                        steps={data.steps} 
+                        isEditing={isEditing}
+                        onUpdate={(idx, key, val) => {
+                            const newSteps = [...data.steps];
+                            newSteps[idx][key] = val;
+                            onUpdate('steps', newSteps);
+                        }}
+                    />}
                     {Object.entries(data).map(([key, value], i) => {
                         const reserved = ['quote', 'author', 'metrics', 'steps', 'type', 'title'];
                         if (reserved.includes(key)) return null;
                         return (
                             <div key={i} style={{marginTop: '24px'}}>
                                 <div style={{fontSize: '11px', fontWeight: 800, color: 'var(--brand)', textTransform: 'uppercase', marginBottom: '8px', opacity: 0.4}}>{key}</div>
-                                <AdaptiveContent data={value} />
+                                <AdaptiveContent 
+                                    data={value} 
+                                    isEditing={isEditing}
+                                    onUpdate={(field, val) => {
+                                        const newData = {...data};
+                                        newData[key] = val;
+                                        onUpdate(key, val);
+                                    }}
+                                />
                             </div>
                         );
                     })}
@@ -167,11 +245,19 @@
             );
         }
 
-        function OutputStage({ data, onReset }) {
+        function OutputStage({ data: initialData, onReset }) {
+            const [data, setData] = useState(initialData);
             const [active, setActive] = useState(0);
+            const [isEditing, setIsEditing] = useState(false);
             const contentRef = useRef(null);
             const sectionRefs = useRef([]);
             const isManualScrolling = useRef(false);
+
+            const updateSection = (idx, newData) => {
+                const newSections = [...data.sections];
+                newSections[idx] = newData;
+                setData({...data, sections: newSections});
+            };
 
             useEffect(() => {
                 const handleScroll = () => {
@@ -208,7 +294,7 @@
             };
 
             return (
-                <div style={{flex: 1, width: '100%', display: 'flex', position: 'relative', overflow: 'hidden'}}>
+                <div className={isEditing ? 'is-editing' : ''} style={{flex: 1, width: '100%', display: 'flex', position: 'relative', overflow: 'hidden'}}>
                     {/* Desktop Sidebar */}
                     <div className="no-print desktop-sidebar" style={{ width: '320px', borderRight: '1px solid #F0F0F0', background: '#fff', padding: '50px 32px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
                         <h4 style={{fontSize: '11px', fontWeight: 700, color: '#CCC', letterSpacing: '2px', textTransform: 'uppercase'}}>內容導航</h4>
@@ -218,6 +304,9 @@
                             ))}
                         </div>
                         <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                            <button onClick={() => setIsEditing(!isEditing)} className={`glass-btn ${isEditing ? 'active' : ''}`} style={{width: '100%'}}>
+                                {isEditing ? '✓ 完成編輯' : '✎ 編輯模式'}
+                            </button>
                             <button onClick={() => window.print()} className="glass-btn" style={{width: '100%'}}>🖨️ 列印 / PDF</button>
                             <button onClick={onReset} className="glass-btn" style={{width: '100%'}}>← 返回修改</button>
                         </div>
@@ -238,8 +327,25 @@
                     <div ref={contentRef} className="custom-scroll content-area" style={{ flex: 1, overflowY: 'auto', background: '#FDFDFD' }}>
                         {data.sections.map((s, i) => (
                             <div key={i} ref={el => sectionRefs.current[i] = el} className="section-anchor" style={{marginBottom: '100px', animation: 'fadeIn 0.8s ease-out'}}>
-                                <h2 className="serif" style={{fontSize: '36px', color: 'var(--brand)', marginBottom: '32px'}}>{s.title}</h2>
-                                <AdaptiveContent data={s.content} />
+                                <h2 
+                                    className="serif editable-field" 
+                                    contentEditable={isEditing}
+                                    onBlur={(e) => {
+                                        const newS = {...s, title: e.target.innerText};
+                                        updateSection(i, newS);
+                                    }}
+                                    style={{fontSize: '36px', color: 'var(--brand)', marginBottom: '32px'}}
+                                >{s.title}</h2>
+                                <AdaptiveContent 
+                                    data={s.content} 
+                                    isEditing={isEditing}
+                                    onUpdate={(field, val) => {
+                                        const newS = {...s};
+                                        if (field === 'text') newS.content = val;
+                                        else newS.content[field] = val;
+                                        updateSection(i, newS);
+                                    }}
+                                />
                             </div>
                         ))}
                         <div className="no-print" style={{height: '300px'}} />
