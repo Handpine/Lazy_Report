@@ -1,0 +1,17 @@
+{
+  "name": "懶人報",
+  "short_name": "懶人報",
+  "description": "懶人報，快速生成報告網頁。",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F7F5F0",
+  "theme_color": "#3E5C76",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

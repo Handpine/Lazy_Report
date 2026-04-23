@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>懶人報 — Premium AI 智能報告 (ScrollSpy 版)</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #F7F5F0; --ink: #1A1A1B; --brand: #3E5C76; --accent: #E8E2D6; }
+        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+        body { 
+            margin: 0; background: var(--bg); color: var(--ink); 
+            font-family: 'Inter', sans-serif; overflow: hidden; 
+            height: 100vh; display: flex; align-items: center; justify-content: center; 
+        }
+        .serif { font-family: 'Newsreader', serif; }
+        .generative-bg { 
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; 
+            background: radial-gradient(circle at 10% 10%, rgba(168, 192, 255, 0.08) 0%, transparent 40%); 
+            filter: blur(80px); 
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 10px; }
+        [contenteditable="true"]:focus { outline: none; background: rgba(62, 92, 118, 0.05); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="generative-bg"></div>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        // --- Optimized Primitives ---
+        function MetricGrid({ metrics, isEditing, updateMetric }) {
+            return (
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', margin: '32px 0'}}>
+                    {metrics.map((m, i) => (
+                        <div key={i} style={{background: 'white', padding: '28px', borderRadius: '24px', border: '1px solid #EEE', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.02)'}}>
+                            <div contentEditable={isEditing} onBlur={(e) => updateMetric(i, 'label', e.target.innerText)} style={{fontSize: '11px', color: '#AAA', fontWeight: 700, letterSpacing: '1.5px', marginBottom: '8px', textTransform: 'uppercase'}}>{m.label}</div>
+                            <div style={{fontSize: '32px', fontWeight: 600, color: m.trend === 'up' ? '#D9534F' : m.trend === 'down' ? '#5CB85C' : 'var(--brand)'}}>
+                                <span contentEditable={isEditing} onBlur={(e) => updateMetric(i, 'value', e.target.innerText)}>{m.value}</span>
+                                <span style={{fontSize: '16px', marginLeft: '4px'}}>{m.trend === 'up' ? '↑' : m.trend === 'down' ? '↓' : ''}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function FlowStep({ steps, isEditing, onUpdate }) {
+            return (
+                <div style={{display: 'flex', flexDirection: 'column', gap: '16px', margin: '32px 0'}}>
+                    {steps.map((s, i) => (
+                        <div key={i} style={{display: 'flex', gap: '20px', alignItems: 'center'}}>
+                            <div style={{width: '36px', height: '36px', background: 'var(--brand)', color: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0}}>{i+1}</div>
+                            <div style={{flex: 1, background: 'white', padding: '20px 28px', borderRadius: '16px', border: '1px solid #EEE'}}>
+                                <span contentEditable={isEditing} onBlur={(e) => { const n = [...steps]; n[i].action = e.target.innerText; onUpdate(n); }} style={{fontWeight: 700, color: 'var(--brand)'}}>{s.action}</span>
+                                <span style={{margin: '0 12px', color: '#DDD'}}>→</span>
+                                <span contentEditable={isEditing} onBlur={(e) => { const n = [...steps]; n[i].impact = e.target.innerText; onUpdate(n); }} style={{color: '#555'}}>{s.impact}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function AdaptiveContent({ data, isEditing, onUpdate }) {
+            if (!data) return null;
+            if (typeof data === 'string') return <p contentEditable={isEditing} onBlur={(e) => onUpdate(e.target.innerText)} style={{lineHeight: 1.9, fontSize: '18px', color: '#444'}} dangerouslySetInnerHTML={{__html: data}} />;
+            
+            const updateField = (key, val) => { onUpdate({ ...data, [key]: val }); };
+
+            return (
+                <div>
+                    {data.quote && (
+                        <div style={{padding: '40px', background: 'rgba(62, 92, 118, 0.03)', borderRadius: '28px', borderLeft: '8px solid var(--brand)', margin: '40px 0'}}>
+                            <div className="serif" contentEditable={isEditing} onBlur={(e) => updateField('quote', e.target.innerText)} style={{fontSize: '26px', fontStyle: 'italic', color: 'var(--brand)', lineHeight: 1.6}}>"{data.quote}"</div>
+                            {data.author && <div contentEditable={isEditing} onBlur={(e) => updateField('author', e.target.innerText)} style={{marginTop: '20px', textAlign: 'right', fontSize: '15px', color: '#888', fontWeight: 600}}>— {data.author}</div>}
+                        </div>
+                    )}
+                    {data.metrics && <MetricGrid metrics={data.metrics} isEditing={isEditing} updateMetric={(idx, key, val) => {
+                        const newMetrics = [...data.metrics]; newMetrics[idx][key] = val; updateField('metrics', newMetrics);
+                    }} />}
+                    {data.steps && <FlowStep steps={data.steps} isEditing={isEditing} onUpdate={(v) => updateField('steps', v)} />}
+                    {data.checklist && (
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '14px', margin: '32px 0'}}>
+                            {data.checklist.map((item, i) => (
+                                <div key={i} style={{display: 'flex', gap: '16px', alignItems: 'center', background: 'white', padding: '18px 24px', borderRadius: '14px', border: '1px solid #EEE'}}>
+                                    <div style={{width: '24px', height: '24px', borderRadius: '50%', background: 'var(--brand)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px'}}>✓</div>
+                                    <div contentEditable={isEditing} onBlur={(e) => { const n = [...data.checklist]; n[i] = e.target.innerText; updateField('checklist', n); }} style={{fontSize: '17px', color: '#444'}}>{item}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    
+                    {Object.entries(data).map(([key, value], i) => {
+                        const reserved = ['quote', 'author', 'metrics', 'steps', 'checklist', 'type', 'title'];
+                        if (reserved.includes(key)) return null;
+                        return (
+                            <div key={i} style={{marginTop: '24px'}}>
+                                <div style={{fontSize: '11px', fontWeight: 800, color: 'var(--brand)', textTransform: 'uppercase', marginBottom: '8px', opacity: 0.6}}>{key}</div>
+                                <AdaptiveContent data={value} isEditing={isEditing} onUpdate={(v) => updateField(key, v)} />
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        function OutputStage({ data, setData, onReset }) {
+            const [active, setActive] = useState(0);
+            const [isEditing, setIsEditing] = useState(false);
+            const contentRef = useRef(null);
+            const sectionRefs = useRef([]);
+            const isManualScrolling = useRef(false);
+
+            // --- Scroll Spy Logic ---
+            useEffect(() => {
+                const handleScroll = () => {
+                    if (isManualScrolling.current) return;
+                    const container = contentRef.current;
+                    if (!container) return;
+                    
+                    const scrollPos = container.scrollTop + 100;
+                    const index = sectionRefs.current.findIndex((ref, i) => {
+                        if (!ref) return false;
+                        const nextRef = sectionRefs.current[i + 1];
+                        if (nextRef) {
+                            return scrollPos >= ref.offsetTop && scrollPos < nextRef.offsetTop;
+                        }
+                        return scrollPos >= ref.offsetTop;
+                    });
+                    
+                    if (index !== -1 && index !== active) {
+                        setActive(index);
+                    }
+                };
+
+                const container = contentRef.current;
+                container?.addEventListener('scroll', handleScroll);
+                return () => container?.removeEventListener('scroll', handleScroll);
+            }, [active]);
+
+            const scrollTo = (i) => {
+                isManualScrolling.current = true;
+                setActive(i);
+                contentRef.current.scrollTo({ top: sectionRefs.current[i].offsetTop - 40, behavior: 'smooth' });
+                setTimeout(() => { isManualScrolling.current = false; }, 800);
+            };
+
+            return (
+                <div style={{height: '100%', display: 'flex', overflow: 'hidden'}}>
+                    <div style={{ width: '280px', borderRight: '1px solid #F0F0F0', background: '#fff', padding: '50px 24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                        <div>
+                            <h4 style={{fontSize: '10px', fontWeight: 700, color: '#CCC', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px'}}>內容導航</h4>
+                            <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                                {data.sections.map((s, i) => (
+                                    <div key={i} onClick={() => scrollTo(i)} style={{ fontSize: '14px', color: i === active ? 'var(--brand)' : '#888', fontWeight: i === active ? 700 : 400, cursor: 'pointer', padding: '12px 16px', borderRadius: '12px', background: i === active ? 'rgba(62, 92, 118, 0.05)' : 'transparent', borderLeft: i === active ? '4px solid var(--brand)' : '4px solid transparent', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+                                        {s.title}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div style={{marginTop: 'auto', borderTop: '1px solid #F5F5F5', paddingTop: '24px'}}>
+                            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px'}}>
+                                <span style={{fontSize: '13px', fontWeight: 600, color: '#666'}}>編輯模式</span>
+                                <div onClick={() => setIsEditing(!isEditing)} style={{ width: '40px', height: '22px', background: isEditing ? 'var(--brand)' : '#DDD', borderRadius: '20px', position: 'relative', cursor: 'pointer', transition: '0.3s' }}>
+                                    <div style={{ width: '16px', height: '16px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: isEditing ? '21px' : '3px', transition: '0.3s' }} />
+                                </div>
+                            </div>
+                            <button onClick={onReset} style={{width: '100%', background: '#f9f9f9', border: '1px solid #eee', padding: '12px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px'}}>← 返回修改</button>
+                        </div>
+                    </div>
+                    <div ref={contentRef} className="custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '80px 100px', background: '#FDFDFD' }}>
+                        {data.sections.map((s, i) => (
+                            <div key={i} ref={el => sectionRefs.current[i] = el} style={{marginBottom: '100px', animation: 'fadeIn 0.8s ease-out'}}>
+                                <h2 className="serif" contentEditable={isEditing} onBlur={(e) => { const n = [...data.sections]; n[i].title = e.target.innerText; setData({ ...data, sections: n }); }} style={{fontSize: '36px', color: 'var(--brand)', marginBottom: '40px'}}>{s.title}</h2>
+                                <AdaptiveContent data={s.content} isEditing={isEditing} onUpdate={(v) => { const n = [...data.sections]; n[i].content = v; setData({ ...data, sections: n }); }} />
+                            </div>
+                        ))}
+                        <div style={{height: '400px'}} />
+                    </div>
+                </div>
+            );
+        }
+
+        function InputStage({ onInject }) {
+            const [inputText, setInputText] = useState('');
+            const [jsonText, setJsonText] = useState('');
+            return (
+                <div style={{padding: '60px 80px', height: '100%', display: 'flex', flexDirection: 'column', gap: '32px'}}>
+                    <h1 className="serif" style={{fontSize: '48px', margin: 0, fontWeight: 400}}>準備您的報告。</h1>
+                    <div style={{display: 'flex', gap: '32px', flex: 1, minHeight: 0}}>
+                        <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                            <textarea value={inputText} onChange={e => setInputText(e.target.value)} style={{ flex: 1, border: '1.5px solid #EEE', borderRadius: '24px', padding: '32px', fontSize: '16px', outline: 'none', background: '#FDFDFD' }} placeholder="貼入原始素材..." />
+                            <button onClick={() => { const p = `...`; navigator.clipboard.writeText(p + "\n\n" + inputText); alert('指令已複製！'); }} style={{ background: '#f5f5f5', border: '1px solid #ddd', padding: '16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600 }}>📋 複製 AI 處理指令</button>
+                        </div>
+                        <div style={{width: '400px', display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                            <textarea value={jsonText} onChange={e => setJsonText(e.target.value)} style={{ flex: 1, background: '#f9f9f9', border: '1.5px dashed #CCC', borderRadius: '24px', padding: '24px', fontSize: '12px', fontFamily: 'monospace', outline: 'none' }} placeholder="貼入 AI 解析結果..." />
+                            <button onClick={() => onInject(jsonText)} style={{ background: 'var(--brand)', color: 'white', border: 'none', padding: '18px', borderRadius: '16px', cursor: 'pointer', fontWeight: 700, boxShadow: '0 10px 30px rgba(62, 92, 118, 0.15)' }}>🚀 渲染報告</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [stage, setStage] = useState('input');
+            const [data, setData] = useState(null);
+            const handleInject = (str) => {
+                try {
+                    let parsed = JSON.parse(str);
+                    if (!parsed.sections) parsed = { sections: [{ title: "智能分析報告", content: parsed }] };
+                    setData(parsed); setStage('output');
+                } catch (e) { alert('JSON 格式錯誤'); }
+            };
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 50px 150px rgba(0,0,0,0.12)', width: '1350px', height: '900px', position: 'relative' }}>
+                    {stage === 'input' && <InputStage onInject={handleInject} />}
+                    {stage === 'output' && <OutputStage data={data} setData={setData} onReset={() => setStage('input')} />}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
