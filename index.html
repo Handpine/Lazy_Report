@@ -7,9 +7,9 @@
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#3E5C76">
+    <meta name="theme-color" content="#F7F5F0">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="懶人報">
     <link rel="apple-touch-icon" href="icon.png">
 
@@ -18,51 +18,71 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #F7F5F0; --ink: #1A1A1B; --brand: #3E5C76; --accent: #E8E2D6; }
+        :root { --bg: #F7F5F0; --ink: #1A1A1B; --brand: #3E5C76; --glass: rgba(255, 255, 255, 0.7); }
         * { box-sizing: border-box; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
         
         html, body { 
             margin: 0; padding: 0; background: var(--bg); color: var(--ink); 
-            font-family: 'Inter', sans-serif; 
-            width: 100%; overflow-x: hidden; /* 徹底鎖死左右滑動 */
-            height: 100%; position: fixed; /* 防止 iOS 橡皮筋回彈影響布局 */
+            font-family: 'Inter', sans-serif; width: 100%; height: 100%;
+            overflow: hidden; position: fixed; /* 防止橡皮筋 */
         }
         
         .serif { font-family: 'Newsreader', serif; }
         .generative-bg { 
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; 
-            background: radial-gradient(circle at 10% 10%, rgba(168, 192, 255, 0.08) 0%, transparent 40%); 
+            background: radial-gradient(circle at 10% 10%, rgba(168, 192, 255, 0.1) 0%, transparent 40%); 
             filter: blur(80px); 
         }
         
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 10px; }
-
-        /* 列印模式優化 */
-        @media print {
-            .no-print { display: none !important; }
-            .content-area { padding: 0 !important; margin: 0 !important; width: 100% !important; overflow: visible !important; }
-            body, html { position: static !important; overflow: visible !important; background: white !important; }
-            .app-container { box-shadow: none !important; width: 100% !important; height: auto !important; border-radius: 0 !important; }
+        /* Premium Buttons */
+        .glass-btn {
+            background: var(--glass); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: var(--brand); padding: 14px 24px; border-radius: 16px;
+            font-weight: 600; cursor: pointer; transition: 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            display: flex; alignItems: center; justifyContent: center; gap: 8px;
+        }
+        .glass-btn:active { transform: scale(0.98); background: rgba(255,255,255,0.9); }
+        .primary-btn {
+            background: var(--brand); color: white; border: none;
+            padding: 16px 32px; border-radius: 18px; font-weight: 700;
+            box-shadow: 0 10px 30px rgba(62, 92, 118, 0.2);
         }
 
-        /* 手機版布局修正 */
+        /* Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 0; height: 0; }
+
+        @media print {
+            .no-print { display: none !important; }
+            body, html { position: static !important; overflow: visible !important; background: white !important; }
+            .content-area { padding: 0 !important; width: 100% !important; overflow: visible !important; }
+        }
+
+        /* Mobile Specific Shell */
         @media (max-width: 768px) {
             .app-container { width: 100vw !important; height: 100vh !important; border-radius: 0 !important; }
-            .sidebar { 
-                width: 100% !important; height: auto !important; 
-                position: fixed !important; bottom: 0 !important; 
-                background: rgba(255,255,255,0.95) !important; 
-                backdrop-filter: blur(20px);
-                z-index: 1000; border-top: 1px solid #EEE !important; 
-                padding: 12px 20px env(safe-area-inset-bottom) !important;
-                display: flex !important; flex-direction: row !important;
-                overflow-x: auto !important; gap: 12px !important;
+            .mobile-nav-bar {
+                position: fixed; bottom: 24px; left: 20px; right: 20px;
+                height: 64px; background: rgba(255,255,255,0.85);
+                backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+                border-radius: 22px; border: 1px solid rgba(255,255,255,0.5);
+                display: flex; align-items: center; padding: 0 12px;
+                overflow-x: auto; scroll-snap-type: x mandatory;
+                box-shadow: 0 15px 40px rgba(0,0,0,0.1); z-index: 2000;
             }
-            .content-area { padding: 40px 20px 140px !important; }
-            .input-stage-container { padding: 40px 20px !important; overflow-y: auto !important; }
+            .mobile-nav-item {
+                padding: 10px 18px; font-size: 13px; color: #888;
+                white-space: nowrap; transition: 0.3s; scroll-snap-align: start;
+            }
+            .mobile-nav-item.active { color: var(--brand); font-weight: 700; }
+            .content-area { padding: 40px 24px 140px !important; touch-action: pan-y; }
+            .mobile-top-tools {
+                position: fixed; top: env(safe-area-inset-top); right: 20px; z-index: 1000;
+                display: flex; gap: 8px;
+            }
         }
     </style>
 </head>
@@ -74,15 +94,14 @@
         const { useState, useRef, useEffect } = React;
 
         // --- Optimized Primitives ---
-        function MetricGrid({ metrics, isEditing, updateMetric }) {
+        function MetricGrid({ metrics }) {
             return (
-                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', margin: '24px 0'}}>
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', margin: '24px 0'}}>
                     {metrics.map((m, i) => (
-                        <div key={i} style={{background: 'white', padding: '16px', borderRadius: '16px', border: '1px solid #EEE', textAlign: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.02)'}}>
-                            <div contentEditable={isEditing} onBlur={(e) => updateMetric(i, 'label', e.target.innerText)} style={{fontSize: '10px', color: '#AAA', fontWeight: 700, letterSpacing: '1px', marginBottom: '4px', textTransform: 'uppercase'}}>{m.label}</div>
-                            <div style={{fontSize: '24px', fontWeight: 600, color: m.trend === 'up' ? '#D9534F' : m.trend === 'down' ? '#5CB85C' : 'var(--brand)'}}>
-                                <span contentEditable={isEditing} onBlur={(e) => updateMetric(i, 'value', e.target.innerText)}>{m.value}</span>
-                                <span style={{fontSize: '14px', marginLeft: '2px'}}>{m.trend === 'up' ? '↑' : m.trend === 'down' ? '↓' : ''}</span>
+                        <div key={i} style={{background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #F0F0F0', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.02)'}}>
+                            <div style={{fontSize: '10px', color: '#BBB', fontWeight: 700, letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase'}}>{m.label}</div>
+                            <div style={{fontSize: '26px', fontWeight: 600, color: m.trend === 'up' ? '#D9534F' : m.trend === 'down' ? '#5CB85C' : 'var(--brand)'}}>
+                                {m.value}<span style={{fontSize: '14px', marginLeft: '4px'}}>{m.trend === 'up' ? '↑' : m.trend === 'down' ? '↓' : ''}</span>
                             </div>
                         </div>
                     ))}
@@ -90,15 +109,15 @@
             );
         }
 
-        function FlowStep({ steps, isEditing, onUpdate }) {
+        function FlowStep({ steps }) {
             return (
-                <div style={{display: 'flex', flexDirection: 'column', gap: '12px', margin: '24px 0'}}>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '16px', margin: '32px 0'}}>
                     {steps.map((s, i) => (
-                        <div key={i} style={{display: 'flex', gap: '16px', alignItems: 'flex-start'}}>
-                            <div style={{width: '28px', height: '28px', background: 'var(--brand)', color: 'white', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0, fontSize: '12px', marginTop: '4px'}}>{i+1}</div>
-                            <div style={{flex: 1, background: 'white', padding: '16px 20px', borderRadius: '14px', border: '1px solid #EEE'}}>
-                                <div contentEditable={isEditing} onBlur={(e) => { const n = [...steps]; n[i].action = e.target.innerText; onUpdate(n); }} style={{fontWeight: 700, color: 'var(--brand)', fontSize: '15px'}}>{s.action}</div>
-                                <div contentEditable={isEditing} onBlur={(e) => { const n = [...steps]; n[i].impact = e.target.innerText; onUpdate(n); }} style={{color: '#777', fontSize: '14px', marginTop: '4px', lineHeight: 1.5}}>{s.impact}</div>
+                        <div key={i} style={{display: 'flex', gap: '20px', alignItems: 'flex-start'}}>
+                            <div style={{width: '32px', height: '32px', background: 'var(--brand)', color: 'white', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0, fontSize: '12px'}}>{i+1}</div>
+                            <div style={{flex: 1, background: 'white', padding: '20px 24px', borderRadius: '20px', border: '1px solid #F0F0F0', boxShadow: '0 4px 15px rgba(0,0,0,0.02)'}}>
+                                <div style={{fontWeight: 700, color: 'var(--brand)', fontSize: '17px'}}>{s.action}</div>
+                                <div style={{color: '#666', fontSize: '15px', marginTop: '6px', lineHeight: 1.6}}>{s.impact}</div>
                             </div>
                         </div>
                     ))}
@@ -106,29 +125,26 @@
             );
         }
 
-        function AdaptiveContent({ data, isEditing, onUpdate }) {
+        function AdaptiveContent({ data }) {
             if (!data) return null;
-            if (typeof data === 'string') return <p contentEditable={isEditing} onBlur={(e) => onUpdate(e.target.innerText)} style={{lineHeight: 1.8, fontSize: '17px', color: '#444', margin: '16px 0'}} dangerouslySetInnerHTML={{__html: data}} />;
-            const updateField = (key, val) => { onUpdate({ ...data, [key]: val }); };
+            if (typeof data === 'string') return <p style={{lineHeight: 1.9, fontSize: '18px', color: '#444', margin: '20px 0'}}>{data}</p>;
             return (
                 <div>
                     {data.quote && (
-                        <div style={{padding: '24px', background: 'rgba(62, 92, 118, 0.03)', borderRadius: '24px', borderLeft: '6px solid var(--brand)', margin: '32px 0'}}>
-                            <div className="serif" contentEditable={isEditing} onBlur={(e) => updateField('quote', e.target.innerText)} style={{fontSize: '20px', fontStyle: 'italic', color: 'var(--brand)', lineHeight: 1.5}}>"{data.quote}"</div>
-                            {data.author && <div contentEditable={isEditing} onBlur={(e) => updateField('author', e.target.innerText)} style={{marginTop: '12px', textAlign: 'right', fontSize: '13px', color: '#888', fontWeight: 600}}>— {data.author}</div>}
+                        <div style={{padding: '32px', background: 'rgba(62, 92, 118, 0.04)', borderRadius: '28px', borderLeft: '6px solid var(--brand)', margin: '40px 0'}}>
+                            <div className="serif" style={{fontSize: '22px', fontStyle: 'italic', color: 'var(--brand)', lineHeight: 1.6}}>"{data.quote}"</div>
+                            {data.author && <div style={{marginTop: '16px', textAlign: 'right', fontSize: '14px', color: '#888', fontWeight: 600}}>— {data.author}</div>}
                         </div>
                     )}
-                    {data.metrics && <MetricGrid metrics={data.metrics} isEditing={isEditing} updateMetric={(idx, key, val) => {
-                        const newMetrics = [...data.metrics]; newMetrics[idx][key] = val; updateField('metrics', newMetrics);
-                    }} />}
-                    {data.steps && <FlowStep steps={data.steps} isEditing={isEditing} onUpdate={(v) => updateField('steps', v)} />}
+                    {data.metrics && <MetricGrid metrics={data.metrics} />}
+                    {data.steps && <FlowStep steps={data.steps} />}
                     {Object.entries(data).map(([key, value], i) => {
-                        const reserved = ['quote', 'author', 'metrics', 'steps', 'checklist', 'type', 'title'];
+                        const reserved = ['quote', 'author', 'metrics', 'steps', 'type', 'title'];
                         if (reserved.includes(key)) return null;
                         return (
-                            <div key={i} style={{marginTop: '20px'}}>
-                                <div style={{fontSize: '11px', fontWeight: 800, color: 'var(--brand)', textTransform: 'uppercase', marginBottom: '4px', opacity: 0.6}}>{key}</div>
-                                <AdaptiveContent data={value} isEditing={isEditing} onUpdate={(v) => updateField(key, v)} />
+                            <div key={i} style={{marginTop: '24px'}}>
+                                <div style={{fontSize: '11px', fontWeight: 800, color: 'var(--brand)', textTransform: 'uppercase', marginBottom: '8px', opacity: 0.4}}>{key}</div>
+                                <AdaptiveContent data={value} />
                             </div>
                         );
                     })}
@@ -136,17 +152,14 @@
             );
         }
 
-        function OutputStage({ data, setData, onReset }) {
+        function OutputStage({ data, onReset }) {
             const [active, setActive] = useState(0);
-            const [isEditing, setIsEditing] = useState(false);
             const contentRef = useRef(null);
             const sectionRefs = useRef([]);
 
             useEffect(() => {
                 const handleScroll = () => {
-                    const container = contentRef.current;
-                    if (!container) return;
-                    const scrollPos = container.scrollTop + 120;
+                    const scrollPos = contentRef.current.scrollTop + 150;
                     const index = sectionRefs.current.findIndex((ref, i) => {
                         if (!ref) return false;
                         const nextRef = sectionRefs.current[i + 1];
@@ -160,30 +173,36 @@
             }, [active]);
 
             return (
-                <div style={{height: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden'}}>
-                    <div className="sidebar no-print" style={{ width: '280px', borderRight: '1px solid #F0F0F0', background: '#fff', padding: '50px 24px', display: 'flex', flexDirection: 'column', gap: '24px', flexShrink: 0 }}>
-                        <h4 style={{fontSize: '10px', fontWeight: 700, color: '#CCC', letterSpacing: '2px', textTransform: 'uppercase'}}>導航</h4>
-                        <div style={{display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, overflowY: 'auto'}} className="custom-scroll">
-                            {data.sections.map((s, i) => (
-                                <div key={i} onClick={() => contentRef.current.scrollTo({ top: sectionRefs.current[i].offsetTop - 40, behavior: 'smooth' })} style={{ fontSize: '13px', color: i === active ? 'var(--brand)' : '#888', fontWeight: i === active ? 700 : 400, cursor: 'pointer', padding: '10px 14px', borderRadius: '10px', background: i === active ? 'rgba(62, 92, 118, 0.05)' : 'transparent', whiteSpace: 'nowrap' }}>{s.title}</div>
-                            ))}
-                        </div>
-                        <div style={{marginTop: 'auto', borderTop: '1px solid #F5F5F5', paddingTop: '16px'}}>
-                            <button onClick={() => window.print()} style={{width: '100%', background: 'var(--brand)', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', marginBottom: '8px'}}>🖨️ 列印/PDF</button>
-                            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px'}}>
-                                <span style={{fontSize: '12px', fontWeight: 600, color: '#666'}}>編輯模式</span>
-                                <div onClick={() => setIsEditing(!isEditing)} style={{ width: '36px', height: '20px', background: isEditing ? 'var(--brand)' : '#DDD', borderRadius: '20px', position: 'relative', cursor: 'pointer' }}>
-                                    <div style={{ width: '14px', height: '14px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: isEditing ? '19px' : '3px', transition: '0.2s' }} />
-                                </div>
-                            </div>
-                            <button onClick={onReset} style={{width: '100%', background: '#f9f9f9', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px'}}>← 返回修改</button>
+                <div style={{height: '100%', width: '100%', display: 'flex', position: 'relative'}}>
+                    {/* Desktop Sidebar */}
+                    <div className="no-print" style={{ width: window.innerWidth < 768 ? '0' : '280px', borderRight: '1px solid #F0F0F0', background: '#fff', padding: '50px 24px', display: window.innerWidth < 768 ? 'none' : 'flex', flexDirection: 'column', gap: '32px' }}>
+                        <h4 style={{fontSize: '10px', fontWeight: 700, color: '#CCC', letterSpacing: '2px', textTransform: 'uppercase'}}>內容導航</h4>
+                        {data.sections.map((s, i) => (
+                            <div key={i} onClick={() => contentRef.current.scrollTo({ top: sectionRefs.current[i].offsetTop - 40, behavior: 'smooth' })} style={{ fontSize: '14px', color: i === active ? 'var(--brand)' : '#888', fontWeight: i === active ? 700 : 400, cursor: 'pointer', padding: '12px 16px', borderRadius: '12px', background: i === active ? 'rgba(62, 92, 118, 0.05)' : 'transparent' }}>{s.title}</div>
+                        ))}
+                        <div style={{marginTop: 'auto'}}>
+                            <button onClick={() => window.print()} className="glass-btn" style={{width: '100%', marginBottom: '12px'}}>🖨️ 列印/PDF</button>
+                            <button onClick={onReset} className="glass-btn" style={{width: '100%'}}>← 返回修改</button>
                         </div>
                     </div>
-                    <div ref={contentRef} className="custom-scroll content-area" style={{ flex: 1, overflowY: 'auto', padding: '60px 80px', background: '#FDFDFD', height: '100%' }}>
+
+                    {/* Mobile Floating Nav */}
+                    <div className="mobile-nav-bar no-print custom-scroll">
                         {data.sections.map((s, i) => (
-                            <div key={i} ref={el => sectionRefs.current[i] = el} style={{marginBottom: '80px', animation: 'fadeIn 0.8s ease-out'}}>
-                                <h2 className="serif" contentEditable={isEditing} style={{fontSize: '32px', color: 'var(--brand)', marginBottom: '32px'}}>{s.title}</h2>
-                                <AdaptiveContent data={s.content} isEditing={isEditing} onUpdate={(v) => { const n = [...data.sections]; n[i].content = v; setData({ ...data, sections: n }); }} />
+                            <div key={i} onClick={() => contentRef.current.scrollTo({ top: sectionRefs.current[i].offsetTop - 40, behavior: 'smooth' })} className={`mobile-nav-item ${i === active ? 'active' : ''}`}>{s.title}</div>
+                        ))}
+                    </div>
+                    <div className="mobile-top-tools no-print">
+                        <div onClick={onReset} className="glass-btn" style={{padding: '10px', borderRadius: '12px'}}>←</div>
+                        <div onClick={() => window.print()} className="glass-btn" style={{padding: '10px', borderRadius: '12px'}}>🖨️</div>
+                    </div>
+
+                    {/* Content */}
+                    <div ref={contentRef} className="custom-scroll content-area" style={{ flex: 1, overflowY: 'auto', background: '#FDFDFD' }}>
+                        {data.sections.map((s, i) => (
+                            <div key={i} ref={el => sectionRefs.current[i] = el} style={{marginBottom: '100px', animation: 'fadeIn 0.8s ease-out'}}>
+                                <h2 className="serif" style={{fontSize: '32px', color: 'var(--brand)', marginBottom: '32px'}}>{s.title}</h2>
+                                <AdaptiveContent data={s.content} />
                             </div>
                         ))}
                         <div style={{height: '300px'}} />
@@ -202,19 +221,18 @@
             }, [inputText, jsonText]);
 
             return (
-                <div className="input-stage-container custom-scroll" style={{padding: '60px 80px', height: '100%', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto'}}>
-                    <h1 className="serif" style={{fontSize: '40px', margin: 0, fontWeight: 400}}>下午好。</h1>
-                    <div style={{display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', gap: '24px', flex: 1, minHeight: 0}}>
-                        <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '300px'}}>
-                            <textarea value={inputText} onChange={e => setInputText(e.target.value)} style={{ flex: 1, border: '1.5px solid #EEE', borderRadius: '24px', padding: '24px', fontSize: '16px', outline: 'none', background: '#FDFDFD' }} placeholder="貼入原始素材..." />
-                            <button onClick={() => { const p = `你是一位資深的「懶人報」內容架構師... (下略)`; navigator.clipboard.writeText(p + "\n\n" + inputText); alert('指令已複製！'); }} style={{ background: '#f5f5f5', border: '1px solid #ddd', padding: '16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600 }}>📋 複製 AI 處理指令</button>
+                <div style={{padding: window.innerWidth < 768 ? '40px 24px' : '60px 80px', height: '100%', display: 'flex', flexDirection: 'column', gap: '32px', overflowY: 'auto'}} className="custom-scroll">
+                    <h1 className="serif" style={{fontSize: '48px', margin: 0, fontWeight: 400}}>下午好。</h1>
+                    <div style={{display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', gap: '32px', flex: 1, minHeight: 0}}>
+                        <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                            <textarea value={inputText} onChange={e => setInputText(e.target.value)} style={{ flex: 1, border: '1px solid rgba(0,0,0,0.05)', borderRadius: '28px', padding: '32px', fontSize: '17px', outline: 'none', background: 'white', boxShadow: '0 10px 40px rgba(0,0,0,0.02)' }} placeholder="貼入原始素材..." />
+                            <button onClick={() => { navigator.clipboard.writeText(`你是一位資深的「懶人報」內容架構師... (下略)\n\n${inputText}`); alert('指令已複製！'); }} className="glass-btn">📋 複製 AI 指令</button>
                         </div>
-                        <div style={{width: window.innerWidth < 768 ? '100%' : '380px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '300px'}}>
-                            <textarea value={jsonText} onChange={e => setJsonText(e.target.value)} style={{ flex: 1, background: '#f9f9f9', border: '1.5px dashed #CCC', borderRadius: '24px', padding: '24px', fontSize: '12px', fontFamily: 'monospace', outline: 'none' }} placeholder="貼入 AI 解析結果..." />
-                            <button onClick={() => onInject(jsonText)} style={{ background: 'var(--brand)', color: 'white', border: 'none', padding: '18px', borderRadius: '16px', cursor: 'pointer', fontWeight: 700, boxShadow: '0 10px 30px rgba(62, 92, 118, 0.15)' }}>🚀 渲染報告</button>
+                        <div style={{width: window.innerWidth < 768 ? '100%' : '420px', display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                            <textarea value={jsonText} onChange={e => setJsonText(e.target.value)} style={{ flex: 1, background: '#F8F8F8', border: '1px dashed rgba(0,0,0,0.1)', borderRadius: '28px', padding: '24px', fontSize: '13px', fontFamily: 'monospace', outline: 'none' }} placeholder="貼入 AI 解析結果..." />
+                            <button onClick={() => onInject(jsonText)} className="primary-btn">🚀 渲染報告</button>
                         </div>
                     </div>
-                    <div style={{fontSize: '12px', color: '#BBB', textAlign: 'center'}}>內容已自動儲存至本地快取</div>
                 </div>
             );
         }
@@ -230,21 +248,15 @@
                 } catch (e) { alert('JSON 格式錯誤'); }
             };
             return (
-                <div className="app-container" style={{ display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 50px 150px rgba(0,0,0,0.12)', width: '1350px', height: '900px', position: 'relative' }}>
+                <div className="app-container" style={{ display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 50px 150px rgba(0,0,0,0.1)', width: '1350px', height: '900px', position: 'relative' }}>
                     {stage === 'input' && <InputStage onInject={handleInject} />}
-                    {stage === 'output' && <OutputStage data={data} setData={setData} onReset={() => setStage('input')} />}
+                    {stage === 'output' && <OutputStage data={data} onReset={() => setStage('input')} />}
                 </div>
             );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js');
-            });
-        }
     </script>
 </body>
 </html>
