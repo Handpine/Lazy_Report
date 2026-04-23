@@ -372,7 +372,31 @@
                     <div style={{display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', gap: '32px', flex: 1, minHeight: 0}}>
                         <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '20px'}}>
                             <textarea value={inputText} onChange={e => setInputText(e.target.value)} style={{ flex: 1, border: '1px solid rgba(0,0,0,0.05)', borderRadius: '32px', padding: '32px', fontSize: '18px', outline: 'none', background: 'white', boxShadow: '0 10px 50px rgba(0,0,0,0.02)', lineHeight: 1.6 }} placeholder="貼入原始素材..." />
-                            <button onClick={() => { navigator.clipboard.writeText(`你是一位資深的「懶人報」內容架構師... (下略)\n\n${inputText}`); alert('指令已複製！'); }} className="glass-btn">📋 複製 AI 處理指令</button>
+                            <button onClick={() => { 
+                                const prompt = `你是一位資深的「懶人報」內容架構師。
+你的任務是將用戶提供的原始素材轉化為結構化的 JSON 數據，以便在專屬網頁中完美渲染。
+
+【輸出格式規範】
+1. 必須僅輸出純 JSON 代碼塊。
+2. 頂層結構必須包含 "sections" 陣列。
+3. 每個 section 包含 "title" (標題) 和 "content" (內容物件)。
+
+【Content 物件支持的關鍵組件】
+- "quote": 字串，用於核心洞察、結論或金句。
+- "author": 字串，與 quote 配套，標註說話者或來源。
+- "metrics": 陣列，用於數據指標。格式：{ "label": "指標名稱", "value": "數值", "trend": "up|down|none" }。
+- "steps": 陣列，用於流程、因果或步驟。格式：{ "action": "執行行動", "impact": "預期影響" }。
+- 其他自定義 Key：可根據內容自定（如 "背景", "建議"），將自動渲染為標題分段。
+
+【組件選用指南】
+- 表現數據、百分比、對比時：務必使用 "metrics" 陣列。
+- 描述方法論、計畫順序、邏輯鏈條時：務必使用 "steps" 陣列。
+- 強調核心論點或引述專家話語時：務必使用 "quote"。
+
+請根據以下原始素材進行轉化：\n\n${inputText}`;
+                                navigator.clipboard.writeText(prompt); 
+                                alert('指令已複製！請將其貼給 AI 處理。'); 
+                            }} className="glass-btn">📋 複製 AI 處理指令</button>
                         </div>
                         <div style={{width: window.innerWidth < 768 ? '100%' : '450px', display: 'flex', flexDirection: 'column', gap: '20px'}}>
                             <textarea value={jsonText} onChange={e => setJsonText(e.target.value)} style={{ flex: 1, background: '#F8F8F8', border: '1px dashed rgba(0,0,0,0.1)', borderRadius: '32px', padding: '28px', fontSize: '14px', fontFamily: 'monospace', outline: 'none', lineHeight: 1.5 }} placeholder="貼入 AI 解析結果 (JSON)..." />
