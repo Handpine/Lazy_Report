@@ -44,15 +44,22 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.03);
             display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        .glass-btn:active { transform: scale(0.98); background: rgba(255,255,255,0.9); }
+        .glass-btn:hover { background: rgba(255,255,255,0.9); transform: translateY(-2px); }
+        .glass-btn:active { transform: scale(0.98); }
+        
         .primary-btn {
             background: var(--brand); color: white; border: none;
             padding: 16px 32px; border-radius: 18px; font-weight: 700;
             box-shadow: 0 10px 30px rgba(62, 92, 118, 0.2);
-            cursor: pointer;
+            cursor: pointer; transition: 0.3s;
         }
+        .primary-btn:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(62, 92, 118, 0.3); }
 
-        .custom-scroll::-webkit-scrollbar { width: 0; height: 0; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 10px; }
+
+        /* Default: Hide Mobile Elements */
+        .mobile-nav-bar, .mobile-top-tools { display: none !important; }
 
         @media print {
             .no-print { display: none !important; }
@@ -66,27 +73,31 @@
 
         /* Mobile Specific Shell */
         @media (max-width: 768px) {
-            .app-container { width: 100vw !important; height: 100vh !important; border-radius: 0 !important; }
+            .app-container { width: 100vw !important; height: 100vh !important; border-radius: 0 !important; margin: 0 !important; }
             .mobile-nav-bar {
+                display: flex !important;
                 position: fixed; bottom: 24px; left: 20px; right: 20px;
                 height: 64px; background: rgba(255,255,255,0.85);
                 backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
                 border-radius: 22px; border: 1px solid rgba(255,255,255,0.5);
-                display: flex; align-items: center; padding: 0 12px;
+                align-items: center; padding: 0 12px;
                 overflow-x: auto; scroll-snap-type: x mandatory;
                 box-shadow: 0 15px 40px rgba(0,0,0,0.1); z-index: 2000;
             }
             .mobile-nav-item {
+                display: block;
                 padding: 10px 18px; font-size: 13px; color: #888;
                 white-space: nowrap; transition: 0.3s; scroll-snap-align: start;
             }
             .mobile-nav-item.active { color: var(--brand); font-weight: 700; background: rgba(62, 92, 118, 0.1); border-radius: 12px; }
             .content-area { padding: 40px 24px 140px !important; touch-action: pan-y; overflow-x: hidden; }
             .mobile-top-tools {
+                display: flex !important;
                 position: fixed; top: env(safe-area-inset-top, 20px); right: 20px; z-index: 2000;
-                display: flex; gap: 8px;
+                gap: 8px;
             }
             .section-anchor { scroll-margin-top: 100px; }
+            .desktop-sidebar { display: none !important; }
         }
     </style>
 </head>
@@ -99,12 +110,12 @@
 
         function MetricGrid({ metrics }) {
             return (
-                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px', margin: '24px 0'}}>
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', margin: '24px 0'}}>
                     {metrics.map((m, i) => (
-                        <div key={i} style={{background: 'white', padding: '16px', borderRadius: '20px', border: '1px solid #F0F0F0', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.02)'}}>
-                            <div style={{fontSize: '9px', color: '#BBB', fontWeight: 700, letterSpacing: '1px', marginBottom: '6px', textTransform: 'uppercase'}}>{m.label}</div>
-                            <div style={{fontSize: '22px', fontWeight: 600, color: m.trend === 'up' ? '#D9534F' : m.trend === 'down' ? '#5CB85C' : 'var(--brand)'}}>
-                                {m.value}<span style={{fontSize: '12px', marginLeft: '2px'}}>{m.trend === 'up' ? '+' : m.trend === 'down' ? '-' : ''}</span>
+                        <div key={i} style={{background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #F0F0F0', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.02)'}}>
+                            <div style={{fontSize: '10px', color: '#BBB', fontWeight: 700, letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase'}}>{m.label}</div>
+                            <div style={{fontSize: '26px', fontWeight: 600, color: m.trend === 'up' ? '#D9534F' : m.trend === 'down' ? '#5CB85C' : 'var(--brand)'}}>
+                                {m.value}<span style={{fontSize: '14px', marginLeft: '4px'}}>{m.trend === 'up' ? '↑' : m.trend === 'down' ? '↓' : ''}</span>
                             </div>
                         </div>
                     ))}
@@ -191,7 +202,6 @@
             const scrollToSection = (i) => {
                 isManualScrolling.current = true;
                 setActive(i);
-                // Increased offset to prevent title clipping
                 contentRef.current.scrollTo({ top: sectionRefs.current[i].offsetTop - 80, behavior: 'smooth' });
                 setTimeout(() => { isManualScrolling.current = false; }, 800);
             };
@@ -199,33 +209,35 @@
             return (
                 <div style={{flex: 1, width: '100%', display: 'flex', position: 'relative', overflow: 'hidden'}}>
                     {/* Desktop Sidebar */}
-                    <div className="no-print" style={{ width: window.innerWidth < 768 ? '0' : '280px', borderRight: '1px solid #F0F0F0', background: '#fff', padding: '50px 24px', display: window.innerWidth < 768 ? 'none' : 'flex', flexDirection: 'column', gap: '32px' }}>
-                        <h4 style={{fontSize: '10px', fontWeight: 700, color: '#CCC', letterSpacing: '2px', textTransform: 'uppercase'}}>內容導航</h4>
-                        {data.sections.map((s, i) => (
-                            <div key={i} onClick={() => scrollToSection(i)} style={{ fontSize: '14px', color: i === active ? 'var(--brand)' : '#888', fontWeight: i === active ? 700 : 400, cursor: 'pointer', padding: '12px 16px', borderRadius: '12px', background: i === active ? 'rgba(62, 92, 118, 0.05)' : 'transparent' }}>{s.title}</div>
-                        ))}
-                        <div style={{marginTop: 'auto'}}>
-                            <button onClick={() => window.print()} className="glass-btn" style={{width: '100%', marginBottom: '12px'}}>PDF Export</button>
-                            <button onClick={onReset} className="glass-btn" style={{width: '100%'}}>Back</button>
+                    <div className="no-print desktop-sidebar" style={{ width: '320px', borderRight: '1px solid #F0F0F0', background: '#fff', padding: '50px 32px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                        <h4 style={{fontSize: '11px', fontWeight: 700, color: '#CCC', letterSpacing: '2px', textTransform: 'uppercase'}}>內容導航</h4>
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto'}} className="custom-scroll">
+                            {data.sections.map((s, i) => (
+                                <div key={i} onClick={() => scrollToSection(i)} style={{ fontSize: '15px', color: i === active ? 'var(--brand)' : '#888', fontWeight: i === active ? 700 : 400, cursor: 'pointer', padding: '14px 18px', borderRadius: '14px', background: i === active ? 'rgba(62, 92, 118, 0.05)' : 'transparent', transition: '0.3s' }}>{s.title}</div>
+                            ))}
+                        </div>
+                        <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                            <button onClick={() => window.print()} className="glass-btn" style={{width: '100%'}}>🖨️ 列印 / PDF</button>
+                            <button onClick={onReset} className="glass-btn" style={{width: '100%'}}>← 返回修改</button>
                         </div>
                     </div>
 
                     {/* Mobile Floating Nav */}
-                    <div className="mobile-nav-bar no-print custom-scroll">
+                    <div className="mobile-nav-bar no-print">
                         {data.sections.map((s, i) => (
                             <div key={i} onClick={() => scrollToSection(i)} className={`mobile-nav-item ${i === active ? 'active' : ''}`}>{s.title}</div>
                         ))}
                     </div>
                     <div className="mobile-top-tools no-print">
-                        <div onClick={onReset} className="glass-btn" style={{padding: '10px', borderRadius: '12px', minWidth: '44px'}}>Back</div>
-                        <div onClick={() => window.print()} className="glass-btn" style={{padding: '10px', borderRadius: '12px', minWidth: '44px'}}>PDF</div>
+                        <div onClick={onReset} className="glass-btn" style={{padding: '12px', borderRadius: '14px'}}>←</div>
+                        <div onClick={() => window.print()} className="glass-btn" style={{padding: '12px', borderRadius: '14px'}}>🖨️</div>
                     </div>
 
                     {/* Content Area */}
                     <div ref={contentRef} className="custom-scroll content-area" style={{ flex: 1, overflowY: 'auto', background: '#FDFDFD' }}>
                         {data.sections.map((s, i) => (
                             <div key={i} ref={el => sectionRefs.current[i] = el} className="section-anchor" style={{marginBottom: '100px', animation: 'fadeIn 0.8s ease-out'}}>
-                                <h2 className="serif" style={{fontSize: '32px', color: 'var(--brand)', marginBottom: '32px'}}>{s.title}</h2>
+                                <h2 className="serif" style={{fontSize: '36px', color: 'var(--brand)', marginBottom: '32px'}}>{s.title}</h2>
                                 <AdaptiveContent data={s.content} />
                             </div>
                         ))}
@@ -245,16 +257,19 @@
             }, [inputText, jsonText]);
 
             return (
-                <div style={{padding: window.innerWidth < 768 ? '40px 24px' : '60px 80px', flex: 1, display: 'flex', flexDirection: 'column', gap: '32px', overflowY: 'auto', overflowX: 'hidden'}} className="custom-scroll">
-                    <h1 className="serif" style={{fontSize: '48px', margin: 0, fontWeight: 400}}>下午好。</h1>
+                <div style={{padding: window.innerWidth < 768 ? '40px 24px' : '80px 100px', flex: 1, display: 'flex', flexDirection: 'column', gap: '40px', overflowY: 'auto', overflowX: 'hidden'}} className="custom-scroll">
+                    <div>
+                        <h1 className="serif" style={{fontSize: '56px', margin: 0, fontWeight: 400}}>下午好。</h1>
+                        <p style={{color: '#888', marginTop: '8px'}}>準備好生成您的智能報告了嗎？</p>
+                    </div>
                     <div style={{display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', gap: '32px', flex: 1, minHeight: 0}}>
-                        <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '16px'}}>
-                            <textarea value={inputText} onChange={e => setInputText(e.target.value)} style={{ flex: 1, border: '1px solid rgba(0,0,0,0.05)', borderRadius: '28px', padding: '32px', fontSize: '17px', outline: 'none', background: 'white', boxShadow: '0 10px 40px rgba(0,0,0,0.02)' }} placeholder="貼入原始素材..." />
-                            <button onClick={() => { navigator.clipboard.writeText(`你是一位資深的「懶人報」內容架構師... (下略)\n\n${inputText}`); alert('指令已複製！'); }} className="glass-btn">Copy AI Prompt</button>
+                        <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '20px'}}>
+                            <textarea value={inputText} onChange={e => setInputText(e.target.value)} style={{ flex: 1, border: '1px solid rgba(0,0,0,0.05)', borderRadius: '32px', padding: '32px', fontSize: '18px', outline: 'none', background: 'white', boxShadow: '0 10px 50px rgba(0,0,0,0.02)', lineHeight: 1.6 }} placeholder="貼入原始素材..." />
+                            <button onClick={() => { navigator.clipboard.writeText(`你是一位資深的「懶人報」內容架構師... (下略)\n\n${inputText}`); alert('指令已複製！'); }} className="glass-btn">📋 複製 AI 處理指令</button>
                         </div>
-                        <div style={{width: window.innerWidth < 768 ? '100%' : '420px', display: 'flex', flexDirection: 'column', gap: '16px'}}>
-                            <textarea value={jsonText} onChange={e => setJsonText(e.target.value)} style={{ flex: 1, background: '#F8F8F8', border: '1px dashed rgba(0,0,0,0.1)', borderRadius: '28px', padding: '24px', fontSize: '13px', fontFamily: 'monospace', outline: 'none' }} placeholder="貼入 AI 解析結果..." />
-                            <button onClick={() => onInject(jsonText)} className="primary-btn">Render Report</button>
+                        <div style={{width: window.innerWidth < 768 ? '100%' : '450px', display: 'flex', flexDirection: 'column', gap: '20px'}}>
+                            <textarea value={jsonText} onChange={e => setJsonText(e.target.value)} style={{ flex: 1, background: '#F8F8F8', border: '1px dashed rgba(0,0,0,0.1)', borderRadius: '32px', padding: '28px', fontSize: '14px', fontFamily: 'monospace', outline: 'none', lineHeight: 1.5 }} placeholder="貼入 AI 解析結果 (JSON)..." />
+                            <button onClick={() => onInject(jsonText)} className="primary-btn">🚀 渲染智能報告</button>
                         </div>
                     </div>
                 </div>
@@ -267,12 +282,12 @@
             const handleInject = (str) => {
                 try {
                     let parsed = JSON.parse(str);
-                    if (!parsed.sections) parsed = { sections: [{ title: "Analysis Report", content: parsed }] };
+                    if (!parsed.sections) parsed = { sections: [{ title: "智能分析報告", content: parsed }] };
                     setData(parsed); setStage('output');
-                } catch (e) { alert('JSON Format Error'); }
+                } catch (e) { alert('JSON 格式錯誤，請確認貼入完整的 JSON 代碼'); }
             };
             return (
-                <div className="app-container" style={{ display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 50px 150px rgba(0,0,0,0.1)', width: '1350px', height: '900px', position: 'relative', maxWidth: '100vw', margin: 'auto' }}>
+                <div className="app-container" style={{ display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 60px 180px rgba(0,0,0,0.12)', width: '1380px', height: '920px', position: 'relative', maxWidth: '95vw', maxHeight: '92vh', margin: '40px auto' }}>
                     {stage === 'input' && <InputStage onInject={handleInject} />}
                     {stage === 'output' && <OutputStage data={data} onReset={() => setStage('input')} />}
                 </div>
