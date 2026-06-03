@@ -427,9 +427,17 @@
                     {/* Header Summary Card */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingBottom: '4px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>數據總數 (Total Count)</span>
+                            <span 
+                                className="editable-field" 
+                                contentEditable={isEditing} 
+                                style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, outline: 'none' }}
+                            >項目總計 (TOTAL)</span>
                             <span style={{ fontSize: '28px', fontWeight: 800, color: '#3E5C76', marginTop: '4px', letterSpacing: '-0.5px' }}>
-                                {total.toFixed(0)} <span style={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>次用戶生成</span>
+                                {total.toFixed(0)} <span 
+                                    className="editable-field" 
+                                    contentEditable={isEditing} 
+                                    style={{ fontSize: '14px', color: '#666', fontWeight: 500, outline: 'none' }}
+                                >單位</span>
                             </span>
                         </div>
                     </div>
@@ -520,7 +528,7 @@
                                                 }}
                                                 style={{ fontWeight: 700, color: '#3E5C76', outline: 'none' }}
                                             >{item.value}</span>
-                                            <span>次 ({pct}%)</span>
+                                            <span>({pct}%)</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1167,6 +1175,14 @@
                             )}
 
                             <button onClick={() => window.print()} className="glass-btn" style={{width: '100%'}}>🖨️ 列印 / PDF</button>
+                            <button 
+                                onClick={() => {
+                                    navigator.clipboard.writeText(JSON.stringify({ sections: data.sections }, null, 4));
+                                    alert('JSON 已複製！(包含目前的編輯狀態)');
+                                }} 
+                                className="glass-btn" 
+                                style={{width: '100%'}}
+                            >📋 複製 JSON</button>
                             <button onClick={onReset} className="glass-btn" style={{width: '100%'}}>← 返回修改</button>
                         </div>
                     </div>
@@ -1179,6 +1195,10 @@
                     </div>
                     <div className="mobile-top-tools no-print">
                         <div onClick={onReset} className="glass-btn" style={{padding: '12px', borderRadius: '14px'}}>←</div>
+                        <div onClick={() => {
+                            navigator.clipboard.writeText(JSON.stringify({ sections: data.sections }, null, 4));
+                            alert('JSON 已複製！');
+                        }} className="glass-btn" style={{padding: '12px', borderRadius: '14px'}}>📋</div>
                         <div onClick={() => window.print()} className="glass-btn" style={{padding: '12px', borderRadius: '14px'}}>🖨️</div>
                     </div>
 
@@ -1255,7 +1275,7 @@
 3. 每個 section 包含 "title" (標題字串) 和 "content" (內容物件)。
 
 【Content 物件支持的關鍵組件】
-- "text": 字串，用於該段落的敘述、脈絡或引言。
+- "text": 字串，用於該段落的敘述、脈絡、引言或圖表說明。重要：若下方附有圖表，請務必在此提供圖表的說明與洞察。
 - "quote": 字串，用於核心洞察、亮點、結論或金句（會被渲染成優雅的引用框）。
 - "author": 字串，與 quote 配套，標註說話者或來源。
 - "metrics": 陣列，用於關鍵數據指標。格式：{ "label": "指標名稱", "value": "數值(如 85% 或 12,500)", "trend": "up|down|none" }。
@@ -1271,7 +1291,7 @@
     "rightList": ["亮點點 1", "亮點點 2", "亮點點 3"]
   }
 - "timeline": 陣列，用於表現時程里程碑、發展路徑、計畫步驟。格式：{ "time": "時間/階段", "event": "事件標題", "desc": "事件描述" }
-- "checklist": 陣列，用於行動準備清單、待辦任務或優化項目。格式：{ "item": "清單項目描述", "checked": true|false }
+- "checklist": 陣列，用於行動準備清單、待辦任務或優化項目。格式：{ "item": "清單項目描述", "checked": false } (預設請全部設為 false)
 - "steps": 陣列，用於流程、因果或邏輯串聯步驟（與 timeline 類似但更輕量）。格式：{ "action": "行動步驟", "impact": "預期影響" }
 
 【組件選用核心指南（極其重要）】
