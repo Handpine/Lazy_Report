@@ -410,8 +410,14 @@
 
         // 4. Premium Stacked Distribution Bar (extremely robust, high-fidelity, and 100% success rate)
         function DonutChart({ data, isEditing, onUpdate }) {
-            if (!Array.isArray(data)) return null;
-            const total = data.reduce((sum, item) => sum + (parseFloat(item.value) || 0), 0) || 1;
+            if (!data) return null;
+            const isArr = Array.isArray(data);
+            const items = isArr ? data : (data.items || []);
+            if (!Array.isArray(items) || items.length === 0) return null;
+            
+            const totalLabel = isArr ? '項目總計 (TOTAL)' : (data.totalLabel || '項目總計 (TOTAL)');
+            const unit = isArr ? '單位' : (data.unit || '單位');
+            const total = items.reduce((sum, item) => sum + (parseFloat(item.value) || 0), 0) || 1;
             
             const colors = [
                 '#3E5C76', // Primary Blue
@@ -430,14 +436,24 @@
                             <span 
                                 className="editable-field" 
                                 contentEditable={isEditing} 
+                                onBlur={(e) => {
+                                    const newData = isArr ? { items: [...data], totalLabel: '項目總計 (TOTAL)', unit: '單位' } : { ...data };
+                                    newData.totalLabel = e.target.innerText;
+                                    onUpdate(newData);
+                                }}
                                 style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, outline: 'none' }}
-                            >項目總計 (TOTAL)</span>
+                            >{totalLabel}</span>
                             <span style={{ fontSize: '28px', fontWeight: 800, color: '#3E5C76', marginTop: '4px', letterSpacing: '-0.5px' }}>
                                 {total.toFixed(0)} <span 
                                     className="editable-field" 
                                     contentEditable={isEditing} 
+                                    onBlur={(e) => {
+                                        const newData = isArr ? { items: [...data], totalLabel: '項目總計 (TOTAL)', unit: '單位' } : { ...data };
+                                        newData.unit = e.target.innerText;
+                                        onUpdate(newData);
+                                    }}
                                     style={{ fontSize: '14px', color: '#666', fontWeight: 500, outline: 'none' }}
-                                >單位</span>
+                                >{unit}</span>
                             </span>
                         </div>
                     </div>
@@ -452,7 +468,7 @@
                         background: '#ECEFF1',
                         boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)'
                     }}>
-                        {data.map((item, idx) => {
+                        {items.map((item, idx) => {
                             const val = parseFloat(item.value) || 0;
                             const pct = (val / total) * 100;
                             if (pct <= 0) return null;
@@ -490,7 +506,7 @@
 
                     {/* Interactive Legend Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '8px' }}>
-                        {data.map((item, idx) => {
+                        {items.map((item, idx) => {
                             const val = parseFloat(item.value) || 0;
                             const pct = ((val / total) * 100).toFixed(1);
                             const color = colors[idx % colors.length];
@@ -511,8 +527,9 @@
                                             className="editable-field" 
                                             contentEditable={isEditing} 
                                             onBlur={(e) => {
-                                                const newData = [...data];
-                                                newData[idx].label = e.target.innerText;
+                                                const newData = isArr ? [...data] : { ...data, items: [...data.items] };
+                                                const targetItems = isArr ? newData : newData.items;
+                                                targetItems[idx].label = e.target.innerText;
                                                 onUpdate(newData);
                                             }}
                                             style={{ color: '#333', fontSize: '13px', fontWeight: 600, outline: 'none' }}
@@ -522,8 +539,9 @@
                                                 className="editable-field" 
                                                 contentEditable={isEditing} 
                                                 onBlur={(e) => {
-                                                    const newData = [...data];
-                                                    newData[idx].value = parseFloat(e.target.innerText) || 0;
+                                                    const newData = isArr ? [...data] : { ...data, items: [...data.items] };
+                                                    const targetItems = isArr ? newData : newData.items;
+                                                    targetItems[idx].value = parseFloat(e.target.innerText) || 0;
                                                     onUpdate(newData);
                                                 }}
                                                 style={{ fontWeight: 700, color: '#3E5C76', outline: 'none' }}
@@ -1280,7 +1298,7 @@
 - "author": 字串，與 quote 配套，標註說話者或來源。
 - "metrics": 陣列，用於關鍵數據指標。格式：{ "label": "指標名稱", "value": "數值(如 85% 或 12,500)", "trend": "up|down|none" }。
 - "linechart": 陣列，用於表現隨時間或順序增長/變化的趨勢折線圖。格式：{ "label": "節點名稱(如一月, Q1)", "value": 數值 }。
-- "donutchart": 陣列，用於表現各項目佔比或數據分佈的多分段比例條 (Stacked Distribution Bar)。格式：[{ "label": "分類名稱", "value": 數值 }]。
+- "donutchart": 物件，用於表現各項目佔比或數據分佈的多分段比例條 (Stacked Distribution Bar)。格式：{ "totalLabel": "總計名目(如: 總樣本數、受訪者總數)", "unit": "單位(如: 人、次)", "items": [{ "label": "分類名稱", "value": 數值 }] }。
 - "barchart": 陣列，用於橫向對比多個維度的指標或滿意度評分。格式：{ "label": "維度名稱", "value": 數值, "unit": "單位(如 % 或 分)" }。
 - "gridcards": 陣列，用於多個核心戰略支柱、產品亮點或關鍵特點。格式：[{ "title": "特點標題", "desc": "特點詳細描述" }]。
 - "comparison": 物件，用於新舊方案對比、優缺點分析或 before/after 對照。格式：
