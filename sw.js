@@ -3,7 +3,11 @@ const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './icon.png'
+  './icon.png',
+  './assets/dexie.js',
+  './assets/react.production.min.js',
+  './assets/react-dom.production.min.js',
+  './assets/babel.min.js'
 ];
 
 self.addEventListener('install', (event) => {

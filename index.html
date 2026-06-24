@@ -14,9 +14,11 @@
     <meta name="apple-mobile-web-app-title" content="懶人報">
     <link rel="apple-touch-icon" href="icon.png">
 
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Database & Libraries -->
+    <script src="./assets/dexie.js"></script>
+    <script src="./assets/react.production.min.js"></script>
+    <script src="./assets/react-dom.production.min.js"></script>
+    <script src="./assets/babel.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <style>
@@ -166,8 +168,14 @@
     <div class="generative-bg no-print"></div>
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-presets="env,react">
         const { useState, useRef, useEffect } = React;
+
+        // --- Database Initialization ---
+        const db = new Dexie('LazyReportDB');
+        db.version(1).stores({
+            reports: '++id, title, updatedAt, createdAt'
+        });
 
         // --- Demo Mock Data ---
         const demoData = {
@@ -1035,7 +1043,7 @@
 
         // --- Render Stages ---
 
-        function OutputStage({ data: initialData, onReset }) {
+        function OutputStage({ data: initialData, onReset, onUpdate, onDelete }) {
             const [history, setHistory] = useState([initialData]);
             const [historyIndex, setHistoryIndex] = useState(0);
             const [active, setActive] = useState(0);
@@ -1052,17 +1060,22 @@
                 newHistory.push(newData);
                 setHistory(newHistory);
                 setHistoryIndex(newHistory.length - 1);
+                if (onUpdate) onUpdate(newData);
             };
 
             const handleUndo = () => {
                 if (historyIndex > 0) {
-                    setHistoryIndex(historyIndex - 1);
+                    const idx = historyIndex - 1;
+                    setHistoryIndex(idx);
+                    if (onUpdate) onUpdate(history[idx]);
                 }
             };
 
             const handleRedo = () => {
                 if (historyIndex < history.length - 1) {
-                    setHistoryIndex(historyIndex + 1);
+                    const idx = historyIndex + 1;
+                    setHistoryIndex(idx);
+                    if (onUpdate) onUpdate(history[idx]);
                 }
             };
 
@@ -1201,7 +1214,10 @@
                                 className="glass-btn" 
                                 style={{width: '100%'}}
                             >📋 複製 JSON</button>
-                            <button onClick={onReset} className="glass-btn" style={{width: '100%'}}>← 返回修改</button>
+                            {onDelete && (
+                                <button onClick={onDelete} className="glass-btn" style={{width: '100%', color: '#D9534F', borderColor: 'rgba(217, 83, 79, 0.15)', background: 'rgba(217, 83, 79, 0.02)'}}>🗑️ 刪除此報告</button>
+                            )}
+                            <button onClick={onReset} className="glass-btn" style={{width: '100%', fontWeight: 700}}>← 儲存並返回</button>
                         </div>
                     </div>
 
@@ -1254,7 +1270,7 @@
             );
         }
 
-        function InputStage({ onInject }) {
+        function InputStage({ onInject, onBack }) {
             const [inputText, setInputText] = useState(localStorage.getItem('lazy_input') || '');
             const [jsonText, setJsonText] = useState(localStorage.getItem('lazy_json') || '');
 
@@ -1271,9 +1287,16 @@
             return (
                 <div style={{padding: window.innerWidth < 768 ? '40px 24px' : '60px 80px', flex: 1, display: 'flex', flexDirection: 'column', gap: '32px', overflowY: 'auto', overflowX: 'hidden'}} className="custom-scroll">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
-                        <div>
-                            <h1 className="serif" style={{fontSize: '48px', margin: 0, fontWeight: 400}}>下午好。</h1>
-                            <p style={{color: '#888', marginTop: '8px'}}>準備好生成您的智能報告了嗎？</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            {onBack && (
+                                <button onClick={onBack} className="glass-btn" style={{ padding: '12px 16px', borderRadius: '14px', fontSize: '15px' }}>
+                                    ← 返回列表
+                                </button>
+                            )}
+                            <div>
+                                <h1 className="serif" style={{fontSize: '40px', margin: 0, fontWeight: 400}}>下午好。</h1>
+                                <p style={{color: '#888', marginTop: '4px'}}>準備好生成您的智能報告了嗎？</p>
+                            </div>
                         </div>
                         <button onClick={loadDemo} className="glass-btn" style={{ fontSize: '13px', padding: '10px 18px', display: 'none' }}>
                             💡 載入高分感展示範例
@@ -1330,27 +1353,291 @@ ${inputText}`;
                         </div>
                         <div style={{width: window.innerWidth < 768 ? '100%' : '480px', display: 'flex', flexDirection: 'column', gap: '20px'}}>
                             <textarea value={jsonText} onChange={e => setJsonText(e.target.value)} style={{ flex: 1, background: '#F8F8F8', border: '1px dashed rgba(0,0,0,0.1)', borderRadius: '32px', padding: '28px', fontSize: '13px', fontFamily: 'monospace', outline: 'none', lineHeight: 1.5, minHeight: '300px' }} placeholder="貼入 AI 解析結果 (JSON)..." />
-                            <button onClick={() => onInject(jsonText)} className="primary-btn">🚀 渲染智能報告</button>
+                            <button onClick={() => onInject(jsonText, inputText)} className="primary-btn">🚀 渲染智能報告</button>
                         </div>
                     </div>
                 </div>
             );
         }
 
+        function HistoryStage({ onCreateNew, onOpenReport }) {
+            const [reports, setReports] = useState([]);
+            
+            useEffect(() => {
+                loadReports();
+            }, []);
+            
+            const loadReports = () => {
+                db.reports.orderBy('updatedAt').reverse().toArray().then(allReports => {
+                    setReports(allReports);
+                }).catch(err => {
+                    console.error("無法載入報告:", err);
+                });
+            };
+
+            const handleDelete = (id, e) => {
+                e.stopPropagation();
+                if (confirm('確定要刪除此報告嗎？此動作無法復原。')) {
+                    db.reports.delete(id).then(() => {
+                        loadReports();
+                    }).catch(err => {
+                        console.error("刪除失敗:", err);
+                    });
+                }
+            };
+
+            const triggerExport = () => {
+                db.reports.toArray().then(allReports => {
+                    const blob = new Blob([JSON.stringify(allReports, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `lazy-report-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }).catch(err => {
+                    alert("匯出備份失敗。");
+                });
+            };
+
+            const triggerImport = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const imported = JSON.parse(evt.target.result);
+                        if (Array.isArray(imported)) {
+                            const promises = imported.map(report => {
+                                const data = Object.assign({}, report);
+                                delete data.id; // 移除 id 以免衝突
+                                return db.reports.add({
+                                    title: data.title || "未命名報告",
+                                    content: data.content,
+                                    summary: data.summary || "",
+                                    inputText: data.inputText || "",
+                                    createdAt: data.createdAt || Date.now(),
+                                    updatedAt: data.updatedAt || Date.now()
+                                });
+                            });
+                            Promise.all(promises).then(() => {
+                                alert('備份匯入成功！');
+                                loadReports();
+                            }).catch(err => {
+                                alert('匯入部分資料時發生錯誤。');
+                                loadReports();
+                            });
+                        } else {
+                            alert('匯入格式錯誤，應為報告陣列。');
+                        }
+                    } catch (err) {
+                        alert('解析 JSON 失敗，請確認檔案格式是否正確。');
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            return (
+                <div style={{padding: window.innerWidth < 768 ? '40px 24px' : '60px 80px', flex: 1, display: 'flex', flexDirection: 'column', gap: '32px', overflowY: 'auto'}} className="custom-scroll">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+                        <div>
+                            <h1 className="serif" style={{fontSize: '48px', margin: 0, fontWeight: 400}}>下午好。</h1>
+                            <p style={{color: '#888', marginTop: '8px'}}>這是您的本地報告典藏庫，資料已安全儲存於手機。</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button onClick={triggerExport} className="glass-btn" style={{ fontSize: '13px', padding: '10px 18px' }}>
+                                📤 匯出備份
+                            </button>
+                            <label className="glass-btn" style={{ fontSize: '13px', padding: '10px 18px', cursor: 'pointer' }}>
+                                📥 匯入備份
+                                <input type="file" accept=".json" onChange={triggerImport} style={{ display: 'none' }} />
+                            </label>
+                        </div>
+                    </div>
+
+                    {reports.length === 0 ? (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', border: '1.5px dashed rgba(0,0,0,0.06)', borderRadius: '32px', background: '#FAFAFA' }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
+                            <h3 className="serif" style={{ fontSize: '20px', margin: '0 0 8px 0', color: 'var(--brand)' }}>尚無儲存的報告</h3>
+                            <p style={{ color: '#888', fontSize: '14px', margin: '0 0 24px 0', textAlign: 'center' }}>您目前在手機本地沒有存放 any 報告。</p>
+                            <button onClick={onCreateNew} className="primary-btn">🚀 建立第一份報告</button>
+                        </div>
+                    ) : (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                                {reports.map((report) => (
+                                    <div 
+                                        key={report.id} 
+                                        onClick={() => onOpenReport(report)}
+                                        className="grid-card"
+                                        style={{ 
+                                            background: 'white', 
+                                            border: '1px solid #F0F0F0', 
+                                            borderRadius: '24px', 
+                                            padding: '28px',
+                                            boxShadow: '0 4px 15px rgba(0,0,0,0.01)',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'space-between',
+                                            minHeight: '180px',
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        <div>
+                                            <h3 className="serif" style={{ fontSize: '20px', color: 'var(--brand)', margin: '0 0 10px 0', lineHeight: 1.4, paddingRight: '24px' }}>
+                                                {report.title}
+                                            </h3>
+                                            <p style={{ fontSize: '13px', color: '#666', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: '0 0 16px 0' }}>
+                                                {report.summary || '點擊以檢閱此報告詳細內容...'}
+                                            </p>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F9F9F9', paddingTop: '12px' }}>
+                                            <span style={{ fontSize: '11px', color: '#AAA', fontWeight: 600 }}>
+                                                🕒 {new Date(report.updatedAt).toLocaleString('zh-TW', { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                            <button 
+                                                onClick={(e) => handleDelete(report.id, e)}
+                                                style={{ background: 'none', border: 'none', color: '#D9534F', cursor: 'pointer', padding: '6px', fontSize: '14px', borderRadius: '50%' }}
+                                                title="刪除報告"
+                                            >
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <button onClick={onCreateNew} className="primary-btn" style={{ alignSelf: 'center', marginTop: '16px' }}>
+                                🚀 建立新報告
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         function App() {
-            const [stage, setStage] = useState('input');
+            const [stage, setStage] = useState('history');
             const [data, setData] = useState(null);
-            const handleInject = (str) => {
+            const [activeReportId, setActiveReportId] = useState(null);
+
+            useEffect(() => {
+                if (navigator.storage && navigator.storage.persist) {
+                    navigator.storage.persist().then(persisted => {
+                        if (persisted) {
+                            console.log("iOS storage is marked as persistent.");
+                        }
+                    });
+                }
+            }, []);
+
+            const handleInject = (str, inputText) => {
                 try {
                     let parsed = JSON.parse(str);
                     if (!parsed.sections) parsed = { sections: [{ title: "智能分析報告", content: parsed }] };
-                    setData(parsed); setStage('output');
-                } catch (e) { alert('JSON 格式錯誤，請確認貼入完整的 JSON 代碼，並確保是標準格式。'); }
+                    
+                    const firstSec = parsed.sections[0] || {};
+                    const title = firstSec.title || "無標題報告";
+                    const summary = firstSec.content && typeof firstSec.content.text === 'string'
+                        ? firstSec.content.text.substring(0, 150)
+                        : "檢閱此報告的詳細內容...";
+                    
+                    const reportData = {
+                        title,
+                        content: parsed,
+                        summary,
+                        inputText: inputText || "",
+                        createdAt: Date.now(),
+                        updatedAt: Date.now()
+                    };
+
+                    db.reports.add(reportData).then(id => {
+                        setData(parsed);
+                        setActiveReportId(id);
+                        setStage('output');
+                    }).catch(err => {
+                        console.error("寫入資料庫失敗:", err);
+                        // 降級處理：即使資料庫失敗也讓用戶能看到渲染結果
+                        setData(parsed);
+                        setStage('output');
+                    });
+                } catch (e) { 
+                    alert('JSON 格式錯誤，請確認貼入完整的 JSON 代碼，並確保是標準格式。'); 
+                }
             };
+
+            const handleUpdateReport = (newContent) => {
+                if (!activeReportId) return;
+                try {
+                    const firstSec = newContent.sections[0] || {};
+                    const title = firstSec.title || "無標題報告";
+                    const summary = firstSec.content && typeof firstSec.content.text === 'string'
+                        ? firstSec.content.text.substring(0, 150)
+                        : "檢閱此報告的詳細內容...";
+
+                    db.reports.update(activeReportId, {
+                        content: newContent,
+                        title,
+                        summary,
+                        updatedAt: Date.now()
+                    }).catch(err => {
+                        console.error("更新資料庫失敗:", err);
+                    });
+                } catch (e) {
+                    console.error("更新處理失敗:", e);
+                }
+            };
+
+            const handleDeleteReport = () => {
+                if (!activeReportId) return;
+                if (confirm('確定要刪除這份報告嗎？此動作無法復原。')) {
+                    db.reports.delete(activeReportId).then(() => {
+                        setActiveReportId(null);
+                        setData(null);
+                        setStage('history');
+                    }).catch(err => {
+                        console.error("刪除資料庫失敗:", err);
+                        setStage('history');
+                    });
+                }
+            };
+
+            const handleOpenReport = (report) => {
+                setData(report.content);
+                setActiveReportId(report.id);
+                setStage('output');
+            };
+
             return (
                 <div className="app-container" style={{ display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 60px 180px rgba(0,0,0,0.12)', width: '1380px', height: '920px', position: 'relative', maxWidth: '95vw', maxHeight: '92vh', margin: '40px auto' }}>
-                    {stage === 'input' && <InputStage onInject={handleInject} />}
-                    {stage === 'output' && <OutputStage data={data} onReset={() => setStage('input')} />}
+                    {stage === 'history' && (
+                        <HistoryStage 
+                            onCreateNew={() => {
+                                setActiveReportId(null);
+                                setData(null);
+                                setStage('input');
+                            }} 
+                            onOpenReport={handleOpenReport} 
+                        />
+                    )}
+                    {stage === 'input' && (
+                        <InputStage 
+                            onInject={handleInject} 
+                            onBack={() => setStage('history')} 
+                        />
+                    )}
+                    {stage === 'output' && (
+                        <OutputStage 
+                            data={data} 
+                            onReset={() => {
+                                setActiveReportId(null);
+                                setData(null);
+                                setStage('history');
+                            }} 
+                            onUpdate={handleUpdateReport}
+                            onDelete={handleDeleteReport}
+                        />
+                    )}
                 </div>
             );
         }
